@@ -1,6 +1,10 @@
-import type { Image } from 'sanity';
-
-export type DayImage = (Image & { alt?: string }) | null;
+export type DayImage = {
+  asset?: {
+    _ref?: string;
+    _type?: string;
+  };
+  alt?: string;
+} | null;
 
 export type DayMediaItem = {
   _key?: string;

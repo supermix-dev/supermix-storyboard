@@ -1,0 +1,7 @@
+{
+  "name": "Supermix Storyboards Importer",
+  "id": "supermix-storyboards-importer",
+  "api": "1.0.0",
+  "editorType": ["figma"],
+  "main": "code.js"
+}
