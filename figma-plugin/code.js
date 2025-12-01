@@ -20,7 +20,7 @@ const HTML_TEMPLATE = `
         padding: 20px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 16px;
       }
 
       h1 {
@@ -28,10 +28,56 @@ const HTML_TEMPLATE = `
         margin: 0;
       }
 
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #666;
+        margin-bottom: 6px;
+      }
+
+      .section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .primary-section {
+        background: rgba(0, 123, 255, 0.06);
+        border: 1px solid rgba(0, 123, 255, 0.15);
+        border-radius: 10px;
+        padding: 14px;
+      }
+
+      .url-input-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        border-radius: 6px;
+        border: 1px solid var(--figma-color-border, #d0d0d0);
+        padding: 10px 12px;
+        font-size: 13px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+
+      input[type="text"]:focus {
+        outline: 2px solid #007bff;
+        outline-offset: -1px;
+      }
+
+      input[type="text"]::placeholder {
+        color: #999;
+        font-family: inherit;
+      }
+
       textarea {
         resize: none;
         width: 100%;
-        min-height: 180px;
+        min-height: 120px;
         border-radius: 8px;
         border: 1px solid var(--figma-color-border, #d0d0d0);
         padding: 12px;
@@ -53,12 +99,23 @@ const HTML_TEMPLATE = `
         cursor: pointer;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 6px;
+        transition: opacity 0.15s;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
 
       button.primary {
         background: #0061f2;
         color: #fff;
+      }
+
+      button.primary:hover:not(:disabled) {
+        background: #0052cc;
       }
 
       button.secondary,
@@ -67,27 +124,78 @@ const HTML_TEMPLATE = `
         color: #111;
       }
 
+      button.secondary:hover:not(:disabled),
+      label.button:hover {
+        background: #d4d7dc;
+      }
+
       button.full-width {
         width: 100%;
-        justify-content: center;
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #999;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--figma-color-border, #d0d0d0);
       }
 
       .status {
         font-size: 12px;
         min-height: 18px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .status:empty {
+        display: none;
       }
 
       .status[data-status="error"] {
         color: #d92d20;
+        background: rgba(217, 45, 32, 0.08);
       }
 
       .status[data-status="success"] {
         color: #039855;
+        background: rgba(3, 152, 85, 0.08);
+      }
+
+      .status[data-status="loading"] {
+        color: #0061f2;
+        background: rgba(0, 97, 242, 0.08);
       }
 
       .hint {
         font-size: 11px;
-        color: #555;
+        color: #666;
+        line-height: 1.4;
+      }
+
+      .manual-section {
+        border-top: 1px solid var(--figma-color-border, #d0d0d0);
+        padding-top: 16px;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .button-row > * {
+        flex: 1;
       }
     </style>
   </head>
@@ -96,19 +204,35 @@ const HTML_TEMPLATE = `
       <div>
         <h1>Supermix Storyboards Importer</h1>
         <p class="hint">
-          Paste the JSON exported from the Supermix app or upload the downloaded
-          .json file.
+          Paste a storyboard URL or shareable link from the Supermix app.
         </p>
       </div>
 
-      <textarea id="jsonInput" placeholder="Paste your storyboard export JSON here"></textarea>
+      <!-- Primary: URL Import -->
+      <div class="section primary-section">
+        <div class="section-label">Quick Import</div>
+        <div class="url-input-group">
+          <input
+            type="text"
+            id="urlInput"
+            placeholder="Paste storyboard URL (e.g., supermix.app/abc123)"
+          />
+          <button class="primary" id="fetchUrl">Import</button>
+        </div>
+      </div>
 
-      <div style="display: flex; gap: 8px;">
-        <button class="primary full-width" id="importJson">Import pasted JSON</button>
-        <label class="button secondary full-width" id="fileLabel">
-          <input type="file" id="fileInput" accept="application/json" style="display:none;" />
-          Import file
-        </label>
+      <div class="divider">or import manually</div>
+
+      <!-- Secondary: Manual Import -->
+      <div class="section manual-section">
+        <textarea id="jsonInput" placeholder="Paste your storyboard export JSON here"></textarea>
+        <div class="button-row">
+          <button class="secondary" id="importJson">Import JSON</button>
+          <label class="button secondary">
+            <input type="file" id="fileInput" accept="application/json" style="display:none;" />
+            Upload file
+          </label>
+        </div>
       </div>
 
       <div class="status" id="status" data-status="idle"></div>
@@ -116,7 +240,9 @@ const HTML_TEMPLATE = `
 
     <script>
       const statusEl = document.getElementById('status');
-      const inputEl = document.getElementById('jsonInput');
+      const urlInput = document.getElementById('urlInput');
+      const fetchUrlBtn = document.getElementById('fetchUrl');
+      const jsonInput = document.getElementById('jsonInput');
       const importBtn = document.getElementById('importJson');
       const fileInput = document.getElementById('fileInput');
 
@@ -132,15 +258,151 @@ const HTML_TEMPLATE = `
         );
       }
 
+      function parseInput(input) {
+        const trimmed = input.trim();
+        
+        // Try to parse as a full URL first
+        try {
+          const url = new URL(trimmed);
+          
+          // Check for legacy export URL: /api/figma-export/{id}
+          const exportMatch = url.pathname.match(/\\/api\\/figma-export\\/([a-zA-Z0-9]+)\\/?$/);
+          if (exportMatch) {
+            return { 
+              type: 'export', 
+              id: exportMatch[1], 
+              baseUrl: url.origin 
+            };
+          }
+          
+          // Check for storyboard URL: /{id} (single path segment, alphanumeric with hyphens)
+          const storyboardMatch = url.pathname.match(/^\\/([a-zA-Z0-9_-]+)\\/?$/);
+          if (storyboardMatch) {
+            return { 
+              type: 'storyboard', 
+              id: storyboardMatch[1], 
+              baseUrl: url.origin 
+            };
+          }
+          
+          // Check for storyboard API URL: /api/storyboard/{id}
+          const storyboardApiMatch = url.pathname.match(/\\/api\\/storyboard\\/([a-zA-Z0-9_-]+)\\/?$/);
+          if (storyboardApiMatch) {
+            return { 
+              type: 'storyboard', 
+              id: storyboardApiMatch[1], 
+              baseUrl: url.origin 
+            };
+          }
+        } catch (e) {
+          // Not a valid URL, continue checking other patterns
+        }
+        
+        // Check for relative URL patterns without protocol
+        // Legacy export format: /api/figma-export/{id}
+        const relativeExportMatch = trimmed.match(/^\\/?api\\/figma-export\\/([a-zA-Z0-9]+)\\/?$/);
+        if (relativeExportMatch) {
+          return { type: 'export', id: relativeExportMatch[1], baseUrl: null };
+        }
+        
+        // Storyboard API format: /api/storyboard/{id}
+        const relativeStoryboardApiMatch = trimmed.match(/^\\/?api\\/storyboard\\/([a-zA-Z0-9_-]+)\\/?$/);
+        if (relativeStoryboardApiMatch) {
+          return { type: 'storyboard', id: relativeStoryboardApiMatch[1], baseUrl: null };
+        }
+        
+        // Relative storyboard format: /{id}
+        const relativeStoryboardMatch = trimmed.match(/^\\/([a-zA-Z0-9_-]+)\\/?$/);
+        if (relativeStoryboardMatch) {
+          return { type: 'storyboard', id: relativeStoryboardMatch[1], baseUrl: null };
+        }
+        
+        // Just an ID (alphanumeric with underscores/hyphens, reasonable length)
+        // Assume it's a storyboard ID since that's the primary use case now
+        if (/^[a-zA-Z0-9_-]{4,64}$/.test(trimmed)) {
+          return { type: 'storyboard', id: trimmed, baseUrl: null };
+        }
+        
+        return null;
+      }
+
+      async function fetchFromUrl() {
+        const input = urlInput.value.trim();
+        if (!input) {
+          setStatus('Enter a storyboard URL', 'error');
+          return;
+        }
+
+        const parsed = parseInput(input);
+        if (!parsed) {
+          setStatus('Invalid URL or ID format', 'error');
+          return;
+        }
+
+        // Build the fetch URL based on type
+        let fetchUrl;
+        if (parsed.baseUrl) {
+          // We have the full base URL
+          const apiPath = parsed.type === 'storyboard' 
+            ? '/api/storyboard/' 
+            : '/api/figma-export/';
+          fetchUrl = parsed.baseUrl + apiPath + parsed.id;
+        } else {
+          // No base URL - require full URL for security
+          setStatus('Please paste the full URL including https://', 'error');
+          return;
+        }
+
+        setStatus('Fetching storyboards…', 'loading');
+        fetchUrlBtn.disabled = true;
+
+        try {
+          const response = await fetch(fetchUrl);
+          
+          if (!response.ok) {
+            if (response.status === 404) {
+              const errorType = parsed.type === 'storyboard' 
+                ? 'Storyboard not found' 
+                : 'Export not found or has expired';
+              throw new Error(errorType);
+            }
+            throw new Error('Failed to fetch storyboard');
+          }
+
+          const payload = await response.json();
+          
+          if (payload.error) {
+            throw new Error(payload.error);
+          }
+
+          setStatus('Importing…', 'loading');
+          sendPayload(payload);
+        } catch (error) {
+          console.error('Failed to fetch from URL', error);
+          setStatus(error.message || 'Failed to fetch storyboards', 'error');
+        } finally {
+          fetchUrlBtn.disabled = false;
+        }
+      }
+
+      fetchUrlBtn.addEventListener('click', fetchFromUrl);
+      
+      urlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          fetchFromUrl();
+        }
+      });
+
       importBtn.addEventListener('click', () => {
-        const value = inputEl.value.trim();
+        const value = jsonInput.value.trim();
         if (!value) {
           setStatus('Paste JSON before importing', 'error');
           return;
         }
         try {
           const payload = JSON.parse(value);
-          setStatus('Importing…');
+          setStatus('Importing…', 'loading');
           sendPayload(payload);
         } catch (error) {
           console.error('Failed to parse JSON', error);
@@ -157,9 +419,9 @@ const HTML_TEMPLATE = `
 
         try {
           const text = await file.text();
-          inputEl.value = text;
+          jsonInput.value = text;
           const payload = JSON.parse(text);
-          setStatus('Importing…');
+          setStatus('Importing…', 'loading');
           sendPayload(payload);
         } catch (error) {
           console.error('Failed to read JSON file', error);
@@ -342,6 +604,40 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
   badge.textAutoResize = 'WIDTH_AND_HEIGHT';
   frame.appendChild(badge);
   cursorY += badge.height + 6;
+
+  const notesText =
+    storyboard &&
+    typeof storyboard.notes === 'string' &&
+    storyboard.notes.trim().length > 0
+      ? storyboard.notes.trim()
+      : null;
+
+  if (notesText) {
+    const notesLabel = figma.createText();
+    notesLabel.fontName = { family: 'Inter', style: 'Semi Bold' };
+    notesLabel.fontSize = 12;
+    notesLabel.lineHeight = { value: 16, unit: 'PIXELS' };
+    notesLabel.fills = [{ type: 'SOLID', color: { r: 0.85, g: 0.85, b: 0.9 } }];
+    notesLabel.characters = 'Notes:';
+    notesLabel.x = textPadding;
+    notesLabel.y = cursorY;
+    notesLabel.textAutoResize = 'WIDTH_AND_HEIGHT';
+    frame.appendChild(notesLabel);
+    cursorY += notesLabel.height + 4;
+
+    const notes = figma.createText();
+    notes.fontName = { family: 'Inter', style: 'Regular' };
+    notes.fontSize = 14;
+    notes.lineHeight = { value: 20, unit: 'PIXELS' };
+    notes.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.95 } }];
+    notes.characters = notesText;
+    notes.x = textPadding;
+    notes.y = cursorY;
+    notes.resize(textWidth, 100);
+    notes.textAutoResize = 'HEIGHT';
+    frame.appendChild(notes);
+    cursorY += notes.height + 12;
+  }
 
   const transcriptSource = getTranscriptSource(storyboard, fallbackTranscript);
   const hasTranscript = transcriptSource.length > 0;

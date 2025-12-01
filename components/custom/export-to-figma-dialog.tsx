@@ -3,15 +3,14 @@
 import type { StoryboardSceneProps } from '@/app/actions/storyboards';
 import { Button } from '@/components/ui/button';
 import {
-  DialogBody,
   DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { TranscriptSegment } from '@/hooks/use-storyboards';
-import { Check, Clipboard, Download } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Check, Clipboard, Download, ExternalLink, Puzzle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 type ExportableTranscriptSegment = Pick<
   TranscriptSegment,
@@ -48,6 +47,7 @@ export function ExportToFigmaDialogContent({
   transcriptContent,
   getMatchedTranscript,
   onClose,
+  roomId,
 }: {
   storyboards: StoryboardSceneProps[];
   transcriptContent: string;
@@ -55,10 +55,66 @@ export function ExportToFigmaDialogContent({
     storyboard: StoryboardSceneProps
   ) => TranscriptSegment[];
   onClose: () => void;
+  roomId?: string;
 }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>(
     'idle'
   );
+  const [linkState, setLinkState] = useState<
+    'idle' | 'generating' | 'generated' | 'error'
+  >('idle');
+  const [shareableUrl, setShareableUrl] = useState<string | null>(null);
+  const [linkCopyState, setLinkCopyState] = useState<'idle' | 'copied'>('idle');
+  const [pageUrlCopyState, setPageUrlCopyState] = useState<'idle' | 'copied'>(
+    'idle'
+  );
+  const [isDownloadingPlugin, setIsDownloadingPlugin] = useState(false);
+
+  // Get the current page URL for quick copy
+  const [pageUrl, setPageUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Use origin + roomId for a clean URL
+      const url = roomId
+        ? `${window.location.origin}/${roomId}`
+        : window.location.href;
+      setPageUrl(url);
+    }
+  }, [roomId]);
+
+  const handleCopyPageUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(pageUrl);
+      setPageUrlCopyState('copied');
+      setTimeout(() => setPageUrlCopyState('idle'), 2000);
+    } catch (error) {
+      console.error('Failed to copy page URL', error);
+    }
+  };
+
+  const handleDownloadPlugin = async () => {
+    try {
+      setIsDownloadingPlugin(true);
+      const response = await fetch('/api/figma-plugin/download');
+      if (!response.ok) {
+        throw new Error('Failed to fetch plugin bundle');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'supermix-figma-plugin.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download plugin bundle', error);
+    } finally {
+      setIsDownloadingPlugin(false);
+    }
+  };
 
   const storyboardsWithTranscript = useMemo<ExportableStoryboard[]>(() => {
     return storyboards.map((storyboard) => {
@@ -156,71 +212,169 @@ export function ExportToFigmaDialogContent({
     }
   };
 
+  const handleGenerateLink = async () => {
+    setLinkState('generating');
+    setShareableUrl(null);
+
+    try {
+      const response = await fetch('/api/figma-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(exportPayload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate shareable link');
+      }
+
+      const data = await response.json();
+      setShareableUrl(data.url);
+      setLinkState('generated');
+
+      // Auto-copy to clipboard
+      await navigator.clipboard.writeText(data.url);
+      setLinkCopyState('copied');
+      setTimeout(() => setLinkCopyState('idle'), 2000);
+    } catch (error) {
+      console.error('Failed to generate shareable link', error);
+      setLinkState('error');
+      setTimeout(() => setLinkState('idle'), 3000);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareableUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareableUrl);
+      setLinkCopyState('copied');
+      setTimeout(() => setLinkCopyState('idle'), 2000);
+    } catch (error) {
+      console.error('Failed to copy link', error);
+    }
+  };
+
   return (
     <DialogContent className="max-w-3xl">
       <DialogHeader>
         <DialogTitle>Export storyboards for Figma</DialogTitle>
-        <DialogClose onClose={onClose} />
+        <DialogClose onClick={onClose} />
       </DialogHeader>
-      <DialogBody className="space-y-6">
+      <div className="space-y-6">
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            This JSON file contains the current storyboard set plus the raw
-            transcript (optional). Download it and load it inside the Supermix
-            Storyboards Figma plugin to generate frames on a Figma page.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Export created{' '}
-            {new Date(exportPayload.meta.generatedAt).toLocaleString()}
+            Copy this page URL and paste it in the Figma plugin to import your
+            storyboards.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={handleCopy} type="button" className="gap-2">
-            {copyState === 'copied' ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Clipboard className="h-4 w-4" />
-            )}
-            {copyState === 'copied'
-              ? 'Copied!'
-              : copyState === 'error'
-              ? 'Copy failed'
-              : 'Copy JSON'}
-          </Button>
+        {/* Primary action: Copy page URL */}
+        <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <ExternalLink className="h-4 w-4" />
+            Storyboard URL
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={pageUrl}
+              className="flex-1 rounded-md border bg-background px-3 py-2 text-sm font-mono"
+            />
+            <Button onClick={handleCopyPageUrl} className="gap-1.5 shrink-0">
+              {pageUrlCopyState === 'copied' ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Clipboard className="h-4 w-4" />
+                  Copy URL
+                </>
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Paste this URL in the Figma plugin to import. The plugin will fetch
+            your storyboards directly.
+          </p>
+        </div>
+
+        {/* Plugin download section */}
+        <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Puzzle className="h-4 w-4" />
+            Figma Plugin
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Don&apos;t have the plugin yet? Download the Supermix Storyboards
+            Importer and install it via Plugins → Development → Import plugin
+            from manifest.
+          </p>
           <Button
-            onClick={handleDownload}
-            type="button"
             variant="outline"
             className="gap-2"
+            onClick={handleDownloadPlugin}
+            disabled={isDownloadingPlugin}
           >
             <Download className="h-4 w-4" />
-            Download JSON
+            {isDownloadingPlugin ? 'Preparing bundle…' : 'Download Plugin'}
           </Button>
         </div>
 
-        <div className="rounded-md border bg-muted/40 p-4 max-h-[50vh] overflow-auto text-xs font-mono leading-relaxed">
-          <pre className="whitespace-pre-wrap">{exportJson}</pre>
-        </div>
+        {/* Manual export options */}
+        <details className="group">
+          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors flex items-center gap-1">
+            <Download className="h-3 w-3" />
+            Export manually (JSON)
+          </summary>
+          <div className="mt-3 space-y-3">
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={handleCopy}
+                type="button"
+                variant="outline"
+                className="gap-2"
+              >
+                {copyState === 'copied' ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Clipboard className="h-4 w-4" />
+                )}
+                {copyState === 'copied'
+                  ? 'Copied!'
+                  : copyState === 'error'
+                  ? 'Copy failed'
+                  : 'Copy JSON'}
+              </Button>
+              <Button
+                onClick={handleDownload}
+                type="button"
+                variant="outline"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download JSON
+              </Button>
+            </div>
+            <details className="group">
+              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                Show JSON preview
+              </summary>
+              <div className="mt-3 rounded-md border bg-muted/40 p-4 max-h-[30vh] overflow-auto text-xs font-mono leading-relaxed">
+                <pre className="whitespace-pre-wrap">{exportJson}</pre>
+              </div>
+            </details>
+          </div>
+        </details>
 
-        <div className="text-xs text-muted-foreground space-y-1">
+        <div className="text-xs text-muted-foreground">
           <p>
-            Tip: Keep this dialog open while running the Figma plugin so you can
-            re-export after adjusting your storyboards.
-          </p>
-          <p>
-            Storyboard image URLs are bundled in the export so the Figma plugin
-            can place them. Missing images will render as a dark placeholder in
-            Figma.
-          </p>
-          <p>
-            Plugin location:{' '}
-            <span className="font-medium">
-              figma-plugin/Supermix Storyboards Importer
-            </span>
+            {storyboards.length} storyboard{storyboards.length !== 1 ? 's' : ''}{' '}
+            ready to export
           </p>
         </div>
-      </DialogBody>
+      </div>
     </DialogContent>
   );
 }

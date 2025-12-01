@@ -7,6 +7,7 @@ import type {
   TranscriptSegment,
   TranscriptWordSegment,
 } from '@/hooks/use-storyboards';
+import { Label } from '../ui/label';
 
 export type StoryboardCardProps = {
   storyboard: StoryboardSceneProps;
@@ -28,6 +29,7 @@ export type StoryboardCardProps = {
   onMergeUp: (storyboardId: string) => void;
   onMergeDown: (storyboardId: string) => void;
   onUpdateImageUrl?: (storyboardId: string, imageUrl: string | null) => void;
+  onUpdateNotes?: (storyboardId: string, notes: string) => void;
 };
 
 export function StoryboardCard({
@@ -45,12 +47,12 @@ export function StoryboardCard({
   onCancelCut,
   onMergeUp,
   onMergeDown,
+  onUpdateNotes,
 }: StoryboardCardProps) {
   return (
-    <Card className="rounded-lg border border-muted bg-muted/40 p-4 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <Card className="rounded-lg">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b">
         <div className="flex flex-wrap items-center gap-3">
-          <h4 className="text-base font-semibold">{storyboard.title}</h4>
           {(storyboard.start || storyboard.end) && (
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
               {storyboard.start?.toFixed(2)}s → {storyboard.end?.toFixed(2)}s
@@ -92,106 +94,119 @@ export function StoryboardCard({
         </div>
       )}
 
-      {matchedTranscript.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-muted">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-muted-foreground">Transcript:</p>
-            {isCutting && (
-              <p className="text-xs text-primary font-medium">
-                ✂️ Select a word to split after
-              </p>
-            )}
-          </div>
-          <div className="space-y-2">
-            {matchedTranscript.map((entry, idx) => {
-              const isBeforeCut =
-                hasCutPosition &&
-                cutPosition?.splitTime !== null &&
-                entry.words.length > 0 &&
-                entry.words.some(
-                  (w) => w.end !== null && w.end <= cutPosition!.splitTime!
-                );
-              const isAfterCut =
-                hasCutPosition &&
-                cutPosition?.splitTime !== null &&
-                entry.words.length > 0 &&
-                entry.words.some(
-                  (w) => w.start !== null && w.start > cutPosition!.splitTime!
-                );
+      <div className="space-y-3">
+        {matchedTranscript.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between px-4 py-2 border-b">
+              <Label className="text-muted-foreground">Transcript</Label>
+              {isCutting && (
+                <p className="text-xs text-primary font-medium">
+                  ✂️ Select a word to split after
+                </p>
+              )}
+            </div>
+            <div className="space-y-2 px-4 py-2">
+              {matchedTranscript.map((entry, idx) => {
+                const isBeforeCut =
+                  hasCutPosition &&
+                  cutPosition?.splitTime !== null &&
+                  entry.words.length > 0 &&
+                  entry.words.some(
+                    (w) => w.end !== null && w.end <= cutPosition!.splitTime!
+                  );
+                const isAfterCut =
+                  hasCutPosition &&
+                  cutPosition?.splitTime !== null &&
+                  entry.words.length > 0 &&
+                  entry.words.some(
+                    (w) => w.start !== null && w.start > cutPosition!.splitTime!
+                  );
 
-              // In cut mode, render words individually
-              if (isCutting && entry.words.length > 0) {
+                // In cut mode, render words individually
+                if (isCutting && entry.words.length > 0) {
+                  return (
+                    <div
+                      key={entry.id ?? idx}
+                      className="text-sm bg-background/50"
+                    >
+                      {entry.speaker && (
+                        <span className="font-medium text-primary mr-2">
+                          {entry.speaker}:
+                        </span>
+                      )}
+                      {entry.words.map((word, wordIdx) => {
+                        const isCutWord =
+                          hasCutPosition && cutPosition?.splitTime === word.end;
+
+                        return (
+                          <span
+                            key={`${entry.id}-${wordIdx}`}
+                            className={`inline-block px-0.5 rounded cursor-pointer transition-colors relative group ${
+                              isCutWord
+                                ? 'bg-primary text-primary-foreground'
+                                : 'hover:bg-primary/20'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onWordClick(storyboard.id, word);
+                            }}
+                            title={`Split after: ${word.text}`}
+                          >
+                            {word.text}
+                            {/* Visual split indicator on hover */}
+                            <span className="absolute right-0 top-0 bottom-0 w-0.5 bg-primary opacity-0 group-hover:opacity-100 pointer-events-none" />
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={entry.id ?? idx}
-                    className="text-sm bg-background/50 p-2 rounded"
+                    className={`text-sm relative ${
+                      hasCutPosition && isBeforeCut
+                        ? 'border-l-2 border-primary/50'
+                        : ''
+                    } ${
+                      hasCutPosition && isAfterCut
+                        ? 'border-l-2 border-destructive/50'
+                        : ''
+                    }`}
                   >
+                    {hasCutPosition &&
+                      cutPosition?.splitTime !== null &&
+                      isBeforeCut &&
+                      !isAfterCut && (
+                        <div className="absolute -left-1 top-0 bottom-0 w-0.5 bg-primary animate-pulse" />
+                      )}
                     {entry.speaker && (
                       <span className="font-medium text-primary mr-2">
                         {entry.speaker}:
                       </span>
                     )}
-                    {entry.words.map((word, wordIdx) => {
-                      const isCutWord =
-                        hasCutPosition && cutPosition?.splitTime === word.end;
-
-                      return (
-                        <span
-                          key={`${entry.id}-${wordIdx}`}
-                          className={`inline-block px-0.5 rounded cursor-pointer transition-colors relative group ${
-                            isCutWord
-                              ? 'bg-primary text-primary-foreground'
-                              : 'hover:bg-primary/20'
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onWordClick(storyboard.id, word);
-                          }}
-                          title={`Split after: ${word.text}`}
-                        >
-                          {word.text}
-                          {/* Visual split indicator on hover */}
-                          <span className="absolute right-0 top-0 bottom-0 w-0.5 bg-primary opacity-0 group-hover:opacity-100 pointer-events-none" />
-                        </span>
-                      );
-                    })}
+                    {entry.text}
                   </div>
                 );
-              }
-
-              return (
-                <div
-                  key={entry.id ?? idx}
-                  className={`text-sm bg-background/50 p-2 rounded relative ${
-                    hasCutPosition && isBeforeCut
-                      ? 'border-l-2 border-primary/50'
-                      : ''
-                  } ${
-                    hasCutPosition && isAfterCut
-                      ? 'border-l-2 border-destructive/50'
-                      : ''
-                  }`}
-                >
-                  {hasCutPosition &&
-                    cutPosition?.splitTime !== null &&
-                    isBeforeCut &&
-                    !isAfterCut && (
-                      <div className="absolute -left-1 top-0 bottom-0 w-0.5 bg-primary animate-pulse" />
-                    )}
-                  {entry.speaker && (
-                    <span className="font-medium text-primary mr-2">
-                      {entry.speaker}:
-                    </span>
-                  )}
-                  {entry.text}
-                </div>
-              );
-            })}
+              })}
+            </div>
           </div>
+        )}
+        <div className="w-full border-t">
+          <div className="px-4 py-2 border-b">
+            <Label className="text-muted-foreground">Notes</Label>
+          </div>
+          <textarea
+            placeholder="Add notes for this scene..."
+            value={storyboard.notes || ''}
+            onChange={(e) => onUpdateNotes?.(storyboard.id, e.target.value)}
+            className="min-h-20 w-full border-none text-sm ring-0 outline-none resize-none rounded-md px-4 py-3"
+          />
         </div>
-      )}
+      </div>
 
-      <div className="flex justify-end gap-2 border-t border-muted pt-3">
+      <div className="flex justify-end gap-2 px-4 py-2 border-t">
         {storyboardIndex > 0 && (
           <Button
             size="sm"

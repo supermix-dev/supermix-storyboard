@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import Image, { type ImageLoader } from 'next/image';
 import { useEffect, useRef, useState } from 'react';
+import { Badge } from '../ui/badge';
 
 const externalImageLoader: ImageLoader = ({ src }) => src;
 
@@ -12,6 +13,7 @@ export function StoryboardGridCard({
   storyboard,
   matchedTranscript,
   onUpdateImageUrl,
+  onUpdateNotes,
 }: StoryboardCardProps) {
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -117,25 +119,41 @@ export function StoryboardGridCard({
         )}
       </div>
 
-      <div className="space-y-2 text-sm p-4">
-        {matchedTranscript.length > 0 &&
-          matchedTranscript.map((entry, idx) => {
-            return (
-              <div key={entry.id ?? idx}>
-                {entry.speaker && (
-                  <span className="mr-2 font-semibold text-primary">
-                    {entry.speaker}:
-                  </span>
-                )}
-                {entry.text}
-              </div>
-            );
-          })}
-        {(storyboard.start || storyboard.end) && (
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            {storyboard.start?.toFixed(2)}s → {storyboard.end?.toFixed(2)}s
-          </span>
-        )}
+      <div className="text-sm flex-1 flex flex-col">
+        <div className="px-4 py-2">
+          {(storyboard.start || storyboard.end) && (
+            <Badge variant="outline">
+              {storyboard.start?.toFixed(2)}s → {storyboard.end?.toFixed(2)}s
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex flex-col border-t border-b px-4 py-2">
+          {matchedTranscript.length > 0 && (
+            <div className="space-y-2">
+              {matchedTranscript.map((entry, idx) => {
+                return (
+                  <div key={entry.id ?? idx}>
+                    {entry.speaker && (
+                      <span className="mr-2 font-semibold text-primary">
+                        {entry.speaker}:
+                      </span>
+                    )}
+                    {entry.text}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="p-0 flex-1 relative">
+          <textarea
+            placeholder="Add notes for this scene..."
+            value={storyboard.notes || ''}
+            onChange={(e) => onUpdateNotes?.(storyboard.id, e.target.value)}
+            className="min-h-16 text-sm flex-1 w-full h-full px-4 py-3 outline-none border-none ring-0 resize-none"
+          />
+        </div>
       </div>
     </Card>
   );

@@ -1,3 +1,5 @@
+export const SHADE_FS_BASE_URL = 'https://fs.shade.inc';
+
 export const SITE_TITLE = 'Supermix Storyboard';
 
 export const SITE_DESCRIPTION =

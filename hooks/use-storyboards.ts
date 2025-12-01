@@ -664,6 +664,17 @@ export function useStoryboards(
     );
   };
 
+  const updateStoryboardNotes = (
+    storyboardId: string,
+    notes: string
+  ) => {
+    setStoryboards((prev) =>
+      prev.map((sb) =>
+        sb.id === storyboardId ? { ...sb, notes } : sb
+      )
+    );
+  };
+
   return {
     storyboards,
     storyboardError,
@@ -680,6 +691,7 @@ export function useStoryboards(
     splitStoryboard,
     mergeStoryboard,
     updateStoryboardImageUrl,
+    updateStoryboardNotes,
     setStoryboards,
   };
 }

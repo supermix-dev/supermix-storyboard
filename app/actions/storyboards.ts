@@ -48,6 +48,7 @@ export type StoryboardSceneProps = {
   start: number;
   end: number;
   image_url?: string | null;
+  notes?: string;
 };
 
 export async function splitTranscriptIntoStoryboards(

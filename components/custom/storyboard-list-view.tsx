@@ -32,6 +32,7 @@ export type StoryboardViewProps = {
   onMergeUp: (storyboardId: string) => void;
   onMergeDown: (storyboardId: string) => void;
   onUpdateImageUrl: (storyboardId: string, imageUrl: string | null) => void;
+  onUpdateNotes: (storyboardId: string, notes: string) => void;
 };
 
 type StoryboardCardComponent = (props: StoryboardCardProps) => ReactElement;
@@ -52,6 +53,7 @@ function renderStoryboardCards(
     onMergeUp,
     onMergeDown,
     onUpdateImageUrl,
+    onUpdateNotes,
   } = props;
 
   return storyboards.map((storyboard, storyboardIndex) => {
@@ -81,6 +83,7 @@ function renderStoryboardCards(
         onMergeUp={onMergeUp}
         onMergeDown={onMergeDown}
         onUpdateImageUrl={onUpdateImageUrl}
+        onUpdateNotes={onUpdateNotes}
       />
     );
   });

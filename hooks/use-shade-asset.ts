@@ -28,51 +28,67 @@ export function useShadeAsset() {
   const [error, setError] = useState<string | null>(null);
   const [pathInput, setPathInput] = useState('');
 
-  const fetchAsset = useCallback(async (path: string) => {
-    if (!path.trim()) {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setAsset(null);
-    setFileUrl(null);
-    setTranscript(null);
-
-    try {
-      const fetchedAsset = await fetchAssetByPath(path);
-      if (!fetchedAsset) {
-        setError('Asset not found');
-        return;
+  const fetchAsset = useCallback(
+    async (
+      path: string
+    ): Promise<{
+      asset: ShadeAssetProps;
+      fileUrl: string | null;
+      transcript: TranscriptData;
+    } | null> => {
+      if (!path.trim()) {
+        return null;
       }
 
-      setAsset(fetchedAsset);
+      setLoading(true);
+      setError(null);
+      setAsset(null);
+      setFileUrl(null);
+      setTranscript(null);
 
-      const url = await fetchPublicFileUrlByAssetId({
-        assetId: fetchedAsset.id,
-      });
-      setFileUrl(url);
-
-      const transcriptReady =
-        fetchedAsset.transcription_id &&
-        fetchedAsset.transcription_job_state === 'COMPLETED';
-
-      if (transcriptReady) {
-        try {
-          const transcriptData = await fetchTranscript(fetchedAsset.id);
-
-          setTranscript(transcriptData);
-        } catch (transcriptError) {
-          console.error('Error fetching transcript:', transcriptError);
-          setTranscript(null);
+      try {
+        const fetchedAsset = await fetchAssetByPath(path);
+        if (!fetchedAsset) {
+          setError('Asset not found');
+          return null;
         }
+
+        setAsset(fetchedAsset);
+
+        const url = await fetchPublicFileUrlByAssetId({
+          assetId: fetchedAsset.id,
+        });
+        setFileUrl(url);
+
+        let transcriptData: TranscriptData = null;
+        const transcriptReady =
+          fetchedAsset.transcription_id &&
+          fetchedAsset.transcription_job_state === 'COMPLETED';
+
+        if (transcriptReady) {
+          try {
+            transcriptData = await fetchTranscript(fetchedAsset.id);
+            setTranscript(transcriptData);
+          } catch (transcriptError) {
+            console.error('Error fetching transcript:', transcriptError);
+            setTranscript(null);
+          }
+        }
+
+        return {
+          asset: fetchedAsset,
+          fileUrl: url,
+          transcript: transcriptData,
+        };
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+        return null;
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   const reloadAssetMetadata = useCallback(async (path: string) => {
     if (!path.trim()) return;
