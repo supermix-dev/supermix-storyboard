@@ -60,11 +60,6 @@ export function ExportToFigmaDialogContent({
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>(
     'idle'
   );
-  const [linkState, setLinkState] = useState<
-    'idle' | 'generating' | 'generated' | 'error'
-  >('idle');
-  const [shareableUrl, setShareableUrl] = useState<string | null>(null);
-  const [linkCopyState, setLinkCopyState] = useState<'idle' | 'copied'>('idle');
   const [pageUrlCopyState, setPageUrlCopyState] = useState<'idle' | 'copied'>(
     'idle'
   );
@@ -209,47 +204,6 @@ export function ExportToFigmaDialogContent({
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to download storyboard export', error);
-    }
-  };
-
-  const handleGenerateLink = async () => {
-    setLinkState('generating');
-    setShareableUrl(null);
-
-    try {
-      const response = await fetch('/api/figma-export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(exportPayload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate shareable link');
-      }
-
-      const data = await response.json();
-      setShareableUrl(data.url);
-      setLinkState('generated');
-
-      // Auto-copy to clipboard
-      await navigator.clipboard.writeText(data.url);
-      setLinkCopyState('copied');
-      setTimeout(() => setLinkCopyState('idle'), 2000);
-    } catch (error) {
-      console.error('Failed to generate shareable link', error);
-      setLinkState('error');
-      setTimeout(() => setLinkState('idle'), 3000);
-    }
-  };
-
-  const handleCopyLink = async () => {
-    if (!shareableUrl) return;
-    try {
-      await navigator.clipboard.writeText(shareableUrl);
-      setLinkCopyState('copied');
-      setTimeout(() => setLinkCopyState('idle'), 2000);
-    } catch (error) {
-      console.error('Failed to copy link', error);
     }
   };
 

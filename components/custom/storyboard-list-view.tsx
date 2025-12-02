@@ -3,11 +3,13 @@
 import type { ReactElement } from 'react';
 
 import type { StoryboardSceneProps } from '@/app/actions/storyboards';
+import type { ImageModel } from '@/app/api/generate-image/route';
 import {
   StoryboardCard,
   type StoryboardCardProps,
 } from '@/components/custom/storyboard-card';
 import { StoryboardGridCard } from '@/components/custom/storyboard-grid-card';
+import type { GenerationJob } from '@/hooks/use-image-generation-queue';
 import type {
   TranscriptSegment,
   TranscriptWordSegment,
@@ -33,6 +35,15 @@ export type StoryboardViewProps = {
   onMergeDown: (storyboardId: string) => void;
   onUpdateImageUrl: (storyboardId: string, imageUrl: string | null) => void;
   onUpdateNotes: (storyboardId: string, notes: string) => void;
+  onUpdatePrompt: (storyboardId: string, prompt: string) => void;
+  // Queue-related props
+  getGenerationJob?: (storyboardId: string) => GenerationJob | null;
+  onGenerateImage?: (
+    storyboardId: string,
+    prompt: string,
+    model: ImageModel
+  ) => void;
+  onRetryGeneration?: (storyboardId: string) => void;
 };
 
 type StoryboardCardComponent = (props: StoryboardCardProps) => ReactElement;
@@ -54,6 +65,10 @@ function renderStoryboardCards(
     onMergeDown,
     onUpdateImageUrl,
     onUpdateNotes,
+    onUpdatePrompt,
+    getGenerationJob,
+    onGenerateImage,
+    onRetryGeneration,
   } = props;
 
   return storyboards.map((storyboard, storyboardIndex) => {
@@ -64,6 +79,7 @@ function renderStoryboardCards(
       storyboard.end > storyboard.start;
     const isCutting = cuttingStoryboardId === storyboard.id;
     const hasCutPosition = cutPosition?.storyboardId === storyboard.id;
+    const generationJob = getGenerationJob?.(storyboard.id);
 
     return (
       <CardComponent
@@ -72,6 +88,8 @@ function renderStoryboardCards(
         storyboardIndex={storyboardIndex}
         totalStoryboards={storyboards.length}
         matchedTranscript={matchedTranscript}
+        allStoryboards={storyboards}
+        getMatchedTranscript={getMatchedTranscript}
         canSplit={canSplit}
         isCutting={isCutting}
         hasCutPosition={hasCutPosition}
@@ -84,6 +102,10 @@ function renderStoryboardCards(
         onMergeDown={onMergeDown}
         onUpdateImageUrl={onUpdateImageUrl}
         onUpdateNotes={onUpdateNotes}
+        onUpdatePrompt={onUpdatePrompt}
+        generationJob={generationJob}
+        onGenerateImage={onGenerateImage}
+        onRetryGeneration={onRetryGeneration}
       />
     );
   });

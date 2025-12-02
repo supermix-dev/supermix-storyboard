@@ -1,8 +1,10 @@
 'use client';
 
+import type { ImageModel } from '@/app/api/generate-image/route';
 import type { StoryboardSceneProps } from '@/app/actions/storyboards';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import type { GenerationJob } from '@/hooks/use-image-generation-queue';
 import type {
   TranscriptSegment,
   TranscriptWordSegment,
@@ -14,6 +16,8 @@ export type StoryboardCardProps = {
   storyboardIndex: number;
   totalStoryboards: number;
   matchedTranscript: TranscriptSegment[];
+  allStoryboards: StoryboardSceneProps[];
+  getMatchedTranscript: (storyboard: StoryboardSceneProps) => TranscriptSegment[];
   canSplit: boolean;
   isCutting: boolean;
   hasCutPosition: boolean;
@@ -30,6 +34,15 @@ export type StoryboardCardProps = {
   onMergeDown: (storyboardId: string) => void;
   onUpdateImageUrl?: (storyboardId: string, imageUrl: string | null) => void;
   onUpdateNotes?: (storyboardId: string, notes: string) => void;
+  onUpdatePrompt?: (storyboardId: string, prompt: string) => void;
+  // Queue-related props (optional, used by grid view)
+  generationJob?: GenerationJob | null;
+  onGenerateImage?: (
+    storyboardId: string,
+    prompt: string,
+    model: ImageModel
+  ) => void;
+  onRetryGeneration?: (storyboardId: string) => void;
 };
 
 export function StoryboardCard({

@@ -11,6 +11,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^2.0.71",
     "@clerk/nextjs": "^6.9.6",
+    "@fal-ai/serverless-client": "^0.14.3",
     "@liveblocks/client": "^3.11.0",
     "@liveblocks/node": "^3.11.0",
     "@liveblocks/react": "^3.11.0",

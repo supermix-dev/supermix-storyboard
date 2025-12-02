@@ -12,7 +12,7 @@ import {
 import type { StoryboardSceneProps } from '@/app/actions/storyboards';
 import { Button } from '@/components/ui/button';
 import type { TranscriptSegment } from '@/hooks/use-storyboards';
-import { Pause, Play, X } from 'lucide-react';
+import { Fullscreen, Minimize, Pause, Play, X } from 'lucide-react';
 
 type StoryboardPreviewViewProps = {
   storyboards: StoryboardSceneProps[];
@@ -53,113 +53,6 @@ const formatTimeRange = (
 
 const externalImageLoader: ImageLoader = ({ src }) => src;
 
-type StoryboardDetailPanelProps = {
-  currentStoryboard: TimedStoryboard | null;
-  shouldShowDetailImage: boolean;
-  onImageError: () => void;
-  onUpdateNotes?: (storyboardId: string, notes: string) => void;
-  matchedTranscript: TranscriptSegment[];
-  onSeekToStoryboard: (storyboard: TimedStoryboard) => void;
-};
-
-function StoryboardDetailPanel({
-  currentStoryboard,
-  shouldShowDetailImage,
-  onImageError,
-  onUpdateNotes,
-  matchedTranscript,
-  onSeekToStoryboard,
-}: StoryboardDetailPanelProps) {
-  const renderTranscript = () => {
-    if (!matchedTranscript.length) {
-      // return (
-      //   <p className="text-sm text-muted-foreground">
-      //     No transcript is associated with this storyboard segment.
-      //   </p>
-      // );
-      return null;
-    }
-
-    // return (
-    //   <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
-    //     {matchedTranscript.map((segment) => (
-    //       <div
-    //         key={segment.id}
-    //         className="rounded-md bg-muted/40 p-2 text-sm leading-relaxed"
-    //       >
-    //         {segment.speaker && (
-    //           <span className="mr-2 font-semibold text-primary">
-    //             {segment.speaker}:
-    //           </span>
-    //         )}
-    //         {segment.text}
-    //       </div>
-    //     ))}
-    //   </div>
-    // );
-    return null;
-  };
-
-  if (!currentStoryboard) {
-    // return (
-    //   <p className="text-sm text-muted-foreground">
-    //     Press play or scrub the video to view storyboard details while
-    //     previewing.
-    //   </p>
-    // );
-    return null;
-  }
-
-  return null;
-  // return (
-  //   <div className="rounded-xl border bg-card p-4 shadow-sm">
-  //     <div className="flex flex-wrap items-center justify-between gap-3">
-  //       <div>
-  //         <p className="text-base font-semibold">{currentStoryboard.title}</p>
-  //         <p className="text-xs text-muted-foreground">
-  //           {formatTimeRange(currentStoryboard.start, currentStoryboard.end)}
-  //         </p>
-  //       </div>
-  //       <Button
-  //         variant="outline"
-  //         size="sm"
-  //         onClick={() => onSeekToStoryboard(currentStoryboard)}
-  //       >
-  //         Jump to start
-  //       </Button>
-  //     </div>
-  //     {shouldShowDetailImage && currentStoryboard.image_url && (
-  //       <div className="mt-4 w-full relative rounded-lg border overflow-hidden aspect-video">
-  //         <Image
-  //           src={currentStoryboard.image_url}
-  //           alt={currentStoryboard.title}
-  //           fill
-  //           sizes="(max-width: 1024px) 100vw, 45vw"
-  //           className="object-cover"
-  //           loader={externalImageLoader}
-  //           unoptimized
-  //           onError={onImageError}
-  //         />
-  //       </div>
-  //     )}
-  //     <div className="mt-4 space-y-3">
-  //       <div>
-  //         <label className="text-sm font-medium mb-2 block">Notes:</label>
-  //         <Textarea
-  //           placeholder="Add notes for this scene..."
-  //           value={currentStoryboard.notes || ''}
-  //           onChange={(e) =>
-  //             onUpdateNotes?.(currentStoryboard.id, e.target.value)
-  //           }
-  //           className="min-h-20"
-  //         />
-  //       </div>
-  //       {renderTranscript()}
-  //     </div>
-  //   </div>
-  // );
-}
-
 type TimelineScrubberProps = {
   timedStoryboards: TimedStoryboard[];
   timingMeta: {
@@ -173,6 +66,8 @@ type TimelineScrubberProps = {
   onTogglePlayPause: () => void;
   mediaDuration: number | null;
   onSeekToStoryboard: (storyboard: TimedStoryboard) => void;
+  overlayMode: 'corner' | 'fullscreen';
+  onToggleOverlayMode: () => void;
 };
 
 function TimelineScrubber({
@@ -184,6 +79,8 @@ function TimelineScrubber({
   onTogglePlayPause,
   mediaDuration,
   onSeekToStoryboard,
+  overlayMode,
+  onToggleOverlayMode,
 }: TimelineScrubberProps) {
   if (timedStoryboards.length === 0) {
     return null;
@@ -200,9 +97,25 @@ function TimelineScrubber({
           className="text-white hover:bg-white/10 h-10 w-10 p-0 flex-shrink-0"
         >
           {isPlaying ? (
-            <Pause className="h-4 w-4" />
+            <Pause className="size-4.5" />
           ) : (
-            <Play className="h-4 w-4" />
+            <Play className="size-4.5" />
+          )}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleOverlayMode}
+          className="text-white hover:bg-white/10 h-10 w-10 p-0 flex-shrink-0"
+          title={
+            overlayMode === 'corner' ? 'Fullscreen overlay' : 'Corner overlay'
+          }
+        >
+          {overlayMode === 'corner' ? (
+            <Fullscreen className="size-4.5" />
+          ) : (
+            <Minimize className="size-4.5" />
           )}
         </Button>
 
@@ -284,6 +197,7 @@ type VideoPlayerProps = {
     | null;
   shouldShowOverlayImage: boolean;
   onImageError: () => void;
+  overlayMode: 'corner' | 'fullscreen';
 };
 
 function VideoPlayer({
@@ -294,6 +208,7 @@ function VideoPlayer({
   currentStoryboard,
   shouldShowOverlayImage,
   onImageError,
+  overlayMode,
 }: VideoPlayerProps) {
   const formatTimeRange = (
     start: number | null | undefined,
@@ -318,22 +233,44 @@ function VideoPlayer({
       )}
 
       {currentStoryboard && (
-        <div className="pointer-events-none overflow-hidden absolute left-4 top-4 max-w-96 w-full rounded-lg border border-white/10 bg-black/90 shadow-sm backdrop-blur-sm">
+        <div
+          className={`pointer-events-none overflow-hidden absolute rounded-lg border border-white/10 bg-black/90 shadow-sm backdrop-blur-sm ${
+            overlayMode === 'fullscreen'
+              ? 'inset-0 flex flex-col items-center justify-center'
+              : 'left-4 top-4 max-w-96 w-full'
+          }`}
+        >
           {shouldShowOverlayImage && currentStoryboard.image_url && (
-            <div className="relative w-full overflow-hidden aspect-video border border-white/10">
+            <div
+              className={`relative overflow-hidden border border-white/10 ${
+                overlayMode === 'fullscreen'
+                  ? 'w-full h-full'
+                  : 'w-full aspect-video'
+              }`}
+            >
               <Image
                 src={currentStoryboard.image_url}
                 alt={currentStoryboard.title}
                 fill
-                sizes="(max-width: 1024px) 80vw, 25vw"
-                className="object-cover"
+                sizes={
+                  overlayMode === 'fullscreen'
+                    ? '100vw'
+                    : '(max-width: 1024px) 80vw, 25vw'
+                }
+                className="object-contain"
                 loader={externalImageLoader}
                 unoptimized
                 onError={onImageError}
               />
             </div>
           )}
-          <div className="px-4 py-3">
+          <div
+            className={`px-4 py-3 ${
+              overlayMode === 'fullscreen'
+                ? 'absolute bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm'
+                : ''
+            }`}
+          >
             <p className="text-sm font-medium text-white">
               {currentStoryboard.title}
             </p>
@@ -350,8 +287,10 @@ function VideoPlayer({
 export function StoryboardPreviewView({
   storyboards,
   fileUrl,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getMatchedTranscript,
-  onUpdateNotes,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onUpdateNotes: _onUpdateNotes,
   onExitPreview,
 }: StoryboardPreviewViewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -361,9 +300,9 @@ export function StoryboardPreviewView({
   const [overlayFailedIdentity, setOverlayFailedIdentity] = useState<
     string | null
   >(null);
-  const [detailFailedIdentity, setDetailFailedIdentity] = useState<
-    string | null
-  >(null);
+  const [overlayMode, setOverlayMode] = useState<'corner' | 'fullscreen'>(
+    'corner'
+  );
 
   const timedStoryboards = useMemo<TimedStoryboard[]>(() => {
     return storyboards
@@ -375,8 +314,6 @@ export function StoryboardPreviewView({
       )
       .sort((a, b) => a.start - b.start);
   }, [storyboards]);
-
-  const untimedCount = storyboards.length - timedStoryboards.length;
 
   const timingMeta = useMemo(() => {
     if (timedStoryboards.length === 0) {
@@ -413,10 +350,6 @@ export function StoryboardPreviewView({
     );
   }, [currentTime, timedStoryboards]);
 
-  const matchedTranscript = currentStoryboard
-    ? getMatchedTranscript(currentStoryboard)
-    : [];
-
   const overlayImageIdentity =
     currentStoryboard?.image_url && currentStoryboard?.id
       ? `${currentStoryboard.id}:${currentStoryboard.image_url}`
@@ -425,19 +358,10 @@ export function StoryboardPreviewView({
   const shouldShowOverlayImage =
     Boolean(overlayImageIdentity) &&
     overlayFailedIdentity !== overlayImageIdentity;
-  const shouldShowDetailImage =
-    Boolean(overlayImageIdentity) &&
-    detailFailedIdentity !== overlayImageIdentity;
 
   const handleOverlayImageError = () => {
     if (overlayImageIdentity) {
       setOverlayFailedIdentity(overlayImageIdentity);
-    }
-  };
-
-  const handleDetailImageError = () => {
-    if (overlayImageIdentity) {
-      setDetailFailedIdentity(overlayImageIdentity);
     }
   };
 
@@ -492,6 +416,10 @@ export function StoryboardPreviewView({
     }
   }, []);
 
+  const handleToggleOverlayMode = useCallback(() => {
+    setOverlayMode((prev) => (prev === 'corner' ? 'fullscreen' : 'corner'));
+  }, []);
+
   return (
     <div className="h-dvh">
       {/* Exit button for fullscreen mode */}
@@ -517,6 +445,7 @@ export function StoryboardPreviewView({
         currentStoryboard={currentStoryboard}
         shouldShowOverlayImage={shouldShowOverlayImage}
         onImageError={handleOverlayImageError}
+        overlayMode={overlayMode}
       />
 
       <TimelineScrubber
@@ -528,6 +457,8 @@ export function StoryboardPreviewView({
         onTogglePlayPause={handleTogglePlayPause}
         mediaDuration={mediaDuration}
         onSeekToStoryboard={seekToStoryboard}
+        overlayMode={overlayMode}
+        onToggleOverlayMode={handleToggleOverlayMode}
       />
       {/* {fileUrl && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -545,7 +476,7 @@ export function StoryboardPreviewView({
       {/* {untimedCount > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           {untimedCount} storyboard{untimedCount === 1 ? '' : 's'} missing
-          timecodes can’t appear in the preview overlay.
+          timecodes can't appear in the preview overlay.
         </div>
       )} */}
 

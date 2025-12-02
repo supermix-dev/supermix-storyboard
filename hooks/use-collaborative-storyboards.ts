@@ -43,9 +43,19 @@ type StoryboardRange = {
 
 export function useCollaborativeStoryboards() {
   // Read from Liveblocks storage
-  const storyboards = useStorage((root) => root.storyboards) ?? [];
-  const transcript = useStorage((root) => root.transcript) ?? [];
+  const storyboardsFromStorage = useStorage((root) => root.storyboards);
+  const transcriptFromStorage = useStorage((root) => root.transcript);
   const assetPath = useStorage((root) => root.assetPath) ?? '';
+
+  // Memoize to prevent dependency issues in hooks
+  const storyboards = useMemo(
+    () => storyboardsFromStorage ?? [],
+    [storyboardsFromStorage]
+  );
+  const transcript = useMemo(
+    () => transcriptFromStorage ?? [],
+    [transcriptFromStorage]
+  );
 
   // Mutations to update storage
   const setStoryboards = useMutation(
@@ -86,6 +96,19 @@ export function useCollaborativeStoryboards() {
       ) as StoredStoryboard[];
       const updated = currentStoryboards.map((sb) =>
         sb.id === storyboardId ? { ...sb, notes } : sb
+      );
+      storage.set('storyboards', updated);
+    },
+    []
+  );
+
+  const updateStoryboardPrompt = useMutation(
+    ({ storage }, storyboardId: string, prompt: string) => {
+      const currentStoryboards = storage.get(
+        'storyboards'
+      ) as StoredStoryboard[];
+      const updated = currentStoryboards.map((sb) =>
+        sb.id === storyboardId ? { ...sb, prompt } : sb
       );
       storage.set('storyboards', updated);
     },
@@ -723,5 +746,6 @@ export function useCollaborativeStoryboards() {
     mergeStoryboard,
     updateStoryboardImageUrl,
     updateStoryboardNotes,
+    updateStoryboardPrompt,
   };
 }

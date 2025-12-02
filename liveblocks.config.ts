@@ -14,6 +14,7 @@ export type StoredStoryboard = {
   end: number;
   image_url?: string | null;
   notes?: string;
+  prompt?: string;
 };
 
 // Transcript word for storage

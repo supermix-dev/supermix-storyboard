@@ -1,6 +1,7 @@
 'use client';
 
 import { updateRoom } from '@/app/actions/rooms';
+import type { ImageModel } from '@/app/api/generate-image/route';
 import type { RoomStatus } from '@/app/page';
 import { ExportToFigmaDialogContent } from '@/components/custom/export-to-figma-dialog';
 import type { StoryboardViewProps } from '@/components/custom/storyboard-list-view';
@@ -23,6 +24,7 @@ import {
   useCollaborativeStoryboards,
   type TranscriptWordSegment,
 } from '@/hooks/use-collaborative-storyboards';
+import { useImageGenerationQueue } from '@/hooks/use-image-generation-queue';
 import { usePresence } from '@/hooks/use-presence';
 import { useShadeAsset } from '@/hooks/use-shade-asset';
 import type { StoredTranscriptEntry } from '@/liveblocks.config';
@@ -58,16 +60,20 @@ export function StoryboardEditor({
     getMatchedTranscript,
     handleSplitStoryboards,
     resetStoryboards,
-    setStoryboards,
     setTranscript,
     setAssetPath,
     splitStoryboard,
     mergeStoryboard,
     updateStoryboardImageUrl,
     updateStoryboardNotes,
+    updateStoryboardPrompt,
   } = useCollaborativeStoryboards();
 
-  const { connectionCount, others } = usePresence();
+  // Initialize image generation queue with balance refresh callback
+  const { addToQueue, getJobStatus, getQueueStats, retryJob } =
+    useImageGenerationQueue(updateStoryboardImageUrl);
+
+  const { others } = usePresence();
 
   const [cuttingStoryboardId, setCuttingStoryboardId] = useState<string | null>(
     null
@@ -87,6 +93,11 @@ export function StoryboardEditor({
   const [isSplitting, setIsSplitting] = useState(false);
   const [roomStatus, setRoomStatus] = useState<RoomStatus>(initialRoomStatus);
   const [roomName, setRoomName] = useState<string>(initialRoomName);
+  const [isBatchGenerateDialogOpen, setIsBatchGenerateDialogOpen] =
+    useState(false);
+  const [batchGenerateModel, setBatchGenerateModel] = useState<ImageModel>(
+    'fal-ai/flux/schnell'
+  );
 
   const handleStatusChange = useCallback(
     async (newStatus: RoomStatus) => {
@@ -119,15 +130,21 @@ export function StoryboardEditor({
   );
 
   // Check if we need to show setup dialog (no asset path set)
+  const [initialSetupDone, setInitialSetupDone] = useState(false);
+
   useEffect(() => {
+    if (initialSetupDone) return;
+
     if (!assetPath && !asset) {
       setIsSetupDialogOpen(true);
+      setInitialSetupDone(true);
     } else if (assetPath && !asset) {
       // Asset path exists in storage, fetch the asset
       reloadAssetMetadata(assetPath).catch(console.error);
       setPathInput(assetPath);
+      setInitialSetupDone(true);
     }
-  }, [assetPath, asset, reloadAssetMetadata, setPathInput]);
+  }, [assetPath, asset, reloadAssetMetadata, setPathInput, initialSetupDone]);
 
   // Auto-split storyboards when transcript is loaded and no storyboards exist
   useEffect(() => {
@@ -137,9 +154,16 @@ export function StoryboardEditor({
       storyboards.length === 0 &&
       !isSplitting
     ) {
-      setIsSplitting(true);
-      handleSplitStoryboards();
-      setIsSplitting(false);
+      // Use a separate effect callback to avoid calling setState directly
+      const performSplit = async () => {
+        setIsSplitting(true);
+        try {
+          await handleSplitStoryboards();
+        } finally {
+          setIsSplitting(false);
+        }
+      };
+      performSplit();
     }
   }, [transcript, storyboards.length, isSplitting, handleSplitStoryboards]);
 
@@ -211,6 +235,62 @@ export function StoryboardEditor({
     setCutPosition(null);
   };
 
+  // Image generation handlers
+  const handleGenerateImage = useCallback(
+    (storyboardId: string, prompt: string, model: ImageModel) => {
+      addToQueue(storyboardId, prompt, model);
+    },
+    [addToQueue]
+  );
+
+  const handleRetryGeneration = useCallback(
+    (storyboardId: string) => {
+      retryJob(storyboardId);
+    },
+    [retryJob]
+  );
+
+  const handleBatchGenerate = useCallback(() => {
+    const storyboardsWithoutImages = storyboards.filter((sb) => !sb.image_url);
+
+    storyboardsWithoutImages.forEach((storyboard) => {
+      let prompt = '';
+
+      // Check if there's a stored prompt for this scene
+      if (storyboard.prompt?.trim()) {
+        prompt = storyboard.prompt.trim();
+      } else {
+        // Generate default prompt from transcript and notes
+        const matchedTranscript = getMatchedTranscript(storyboard);
+        const transcriptText = matchedTranscript
+          .map((segment) => {
+            const speakerPrefix = segment.speaker ? `${segment.speaker}: ` : '';
+            return `${speakerPrefix}${segment.text}`;
+          })
+          .join('\n');
+
+        const notesText = storyboard.notes?.trim() || '';
+
+        if (transcriptText) {
+          prompt += transcriptText;
+        }
+        if (notesText) {
+          if (prompt) {
+            prompt += '\n\n';
+          }
+          prompt += `Notes: ${notesText}`;
+        }
+        if (!prompt) {
+          prompt = storyboard.title || 'Generate an image for this scene';
+        }
+      }
+
+      addToQueue(storyboard.id, prompt, batchGenerateModel);
+    });
+
+    setIsBatchGenerateDialogOpen(false);
+  }, [storyboards, getMatchedTranscript, addToQueue, batchGenerateModel]);
+
   const storyboardViewProps: StoryboardViewProps = {
     storyboards,
     cuttingStoryboardId,
@@ -224,11 +304,20 @@ export function StoryboardEditor({
     onMergeDown: (id: string) => mergeStoryboard(id, 'down'),
     onUpdateImageUrl: updateStoryboardImageUrl,
     onUpdateNotes: updateStoryboardNotes,
+    onUpdatePrompt: updateStoryboardPrompt,
+    getGenerationJob: getJobStatus,
+    onGenerateImage: handleGenerateImage,
+    onRetryGeneration: handleRetryGeneration,
   };
 
   const showCreateStoryboardsCta = storyboards.length === 0 && Boolean(asset);
 
   const isPreviewMode = viewMode === 'preview';
+
+  const storyboardsWithoutImages = storyboards.filter(
+    (sb) => !sb.image_url
+  ).length;
+  const queueStats = getQueueStats();
 
   const handleViewModeChange = (newMode: 'list' | 'grid' | 'preview') => {
     // Store previous view mode when entering preview
@@ -260,7 +349,6 @@ export function StoryboardEditor({
       <TopNavbar
         asset={asset}
         storyboards={storyboards}
-        connectionCount={connectionCount}
         others={others}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
@@ -269,6 +357,9 @@ export function StoryboardEditor({
         onStatusChange={handleStatusChange}
         roomName={roomName}
         onNameChange={handleNameChange}
+        queueStats={queueStats}
+        onOpenBatchGenerate={() => setIsBatchGenerateDialogOpen(true)}
+        storyboardsWithoutImages={storyboardsWithoutImages}
       />
 
       <main className="flex-1 space-y-10 p-8">
@@ -372,6 +463,57 @@ export function StoryboardEditor({
           />
         </Dialog>
       )}
+
+      {/* Batch Generate Dialog */}
+      <Dialog
+        open={isBatchGenerateDialogOpen}
+        onOpenChange={setIsBatchGenerateDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Images for All Scenes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <p className="text-sm text-muted-foreground">
+              Generate AI images for {storyboardsWithoutImages} scene
+              {storyboardsWithoutImages === 1 ? '' : 's'} without images.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Model</label>
+              <select
+                value={batchGenerateModel}
+                onChange={(e) =>
+                  setBatchGenerateModel(e.target.value as ImageModel)
+                }
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="fal-ai/flux/schnell">FLUX Schnell (Fast)</option>
+                <option value="fal-ai/flux/dev">FLUX Dev (Quality)</option>
+                <option value="fal-ai/fast-sdxl">Fast SDXL (Balanced)</option>
+              </select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Images will be generated using the transcript and notes for each
+              scene. Up to 3 images will be generated concurrently.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsBatchGenerateDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBatchGenerate}
+                disabled={storyboardsWithoutImages === 0}
+              >
+                Generate {storyboardsWithoutImages} Image
+                {storyboardsWithoutImages === 1 ? '' : 's'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

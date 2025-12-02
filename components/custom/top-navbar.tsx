@@ -4,6 +4,7 @@ import type { StoryboardSceneProps } from '@/app/actions/storyboards';
 import type { RoomStatus } from '@/app/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import type { QueueStats } from '@/hooks/use-image-generation-queue';
 import type { ShadeAssetProps } from '@/lib/shade/shade.types';
 import type { Presence, UserMeta } from '@/liveblocks.config';
 import type { User } from '@liveblocks/client';
@@ -13,8 +14,10 @@ import {
   Grid,
   Home,
   List,
+  Loader2,
   Pencil,
   Play,
+  RefreshCw,
   Settings,
   X,
 } from 'lucide-react';
@@ -28,7 +31,6 @@ type ViewMode = 'list' | 'grid' | 'preview';
 type TopNavbarProps = {
   asset: ShadeAssetProps | null;
   storyboards: StoryboardSceneProps[];
-  connectionCount: number;
   others: readonly User<Presence, UserMeta>[];
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
@@ -37,12 +39,17 @@ type TopNavbarProps = {
   onStatusChange?: (status: RoomStatus) => void;
   roomName?: string;
   onNameChange?: (name: string) => void;
+  queueStats?: QueueStats;
+  onOpenBatchGenerate?: () => void;
+  storyboardsWithoutImages?: number;
+  falBalance?: number | null;
+  falBalanceLoading?: boolean;
+  onRefreshBalance?: () => void;
 };
 
 export function TopNavbar({
   asset,
   storyboards,
-  connectionCount,
   others,
   viewMode,
   onViewModeChange,
@@ -51,6 +58,10 @@ export function TopNavbar({
   onStatusChange,
   roomName,
   onNameChange,
+  queueStats,
+  falBalance,
+  falBalanceLoading,
+  onRefreshBalance,
 }: TopNavbarProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(roomName || '');
@@ -165,6 +176,35 @@ export function TopNavbar({
               <span className="text-muted-foreground text-xs">Connected</span>
             </div>
           </div>
+
+          {/* Fal Balance */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 text-xs">
+            <span className="text-muted-foreground">fal:</span>
+            {falBalanceLoading ? (
+              <Loader2 className="size-3 animate-spin text-muted-foreground" />
+            ) : falBalance !== null && falBalance !== undefined ? (
+              <span className="font-medium">${falBalance.toFixed(2)}</span>
+            ) : (
+              <span className="text-muted-foreground">--</span>
+            )}
+            {onRefreshBalance && (
+              <button
+                type="button"
+                onClick={onRefreshBalance}
+                disabled={falBalanceLoading}
+                className="ml-0.5 p-0.5 hover:bg-muted rounded transition-colors disabled:opacity-50"
+                title="Refresh balance"
+              >
+                <RefreshCw
+                  className={cn(
+                    'size-3 text-muted-foreground hover:text-foreground',
+                    falBalanceLoading && 'animate-spin'
+                  )}
+                />
+              </button>
+            )}
+          </div>
+
           {others.length > 0 && (
             <div className="flex items-center -space-x-2">
               {others.slice(0, 5).map((user, index) => (
@@ -231,6 +271,30 @@ export function TopNavbar({
             </Button>
           )}
 
+          {/* Batch Generate Button
+          {storyboardsWithoutImages > 0 && onOpenBatchGenerate && (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="gap-2"
+              onClick={onOpenBatchGenerate}
+            >
+              <Sparkles className="size-3.5" />
+              Generate All ({storyboardsWithoutImages})
+            </Button>
+          )} */}
+
+          {/* Queue Progress Indicator */}
+          {queueStats && queueStats.total > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
+              <Loader2 className="size-3 animate-spin" />
+              <span>
+                Generating {queueStats.generating}/{queueStats.total}
+              </span>
+            </div>
+          )}
+
           <SettingsMenu asset={asset} />
         </div>
       </div>
@@ -253,7 +317,7 @@ function SettingsMenu({ asset }: { asset: ShadeAssetProps | null }) {
   return (
     <div>
       <DropdownMenu>
-        <DropdownMenuTrigger>
+        <DropdownMenuTrigger asChild>
           <Button size="sm" variant="outline" className="p-0 size-8">
             <Settings className="size-4" />
           </Button>
