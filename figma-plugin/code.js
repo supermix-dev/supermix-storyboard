@@ -5,158 +5,113 @@ const HTML_TEMPLATE = `
     <meta charset="UTF-8" />
     <title>Supermix Storyboards Importer</title>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+
+      * {
+        box-sizing: border-box;
+      }
+
       :root {
-        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        color: var(--figma-color-text, #111);
+        font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #fff;
       }
 
       body {
         margin: 0;
         padding: 0;
-        background: var(--figma-color-bg, #f5f5f5);
+        min-height: 100vh;
+        background: linear-gradient(165deg, #38bdf8 0%, #3b82f6 50%, #1d4ed8 100%);
       }
 
       .container {
-        padding: 20px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100vh;
+        padding: 32px 24px 24px;
+        text-align: center;
       }
 
-      h1 {
-        font-size: 16px;
+      .brand {
+        font-size: 42px;
+        font-weight: 700;
+        letter-spacing: -1px;
         margin: 0;
+        color: #fff;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
       }
 
-      .section-label {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #666;
-        margin-bottom: 6px;
-      }
-
-      .section {
+      .content {
+        flex: 1;
         display: flex;
         flex-direction: column;
+        align-items: center;
+        justify-content: center;
         gap: 8px;
+        padding: 24px 0;
       }
 
-      .primary-section {
-        background: rgba(0, 123, 255, 0.06);
-        border: 1px solid rgba(0, 123, 255, 0.15);
-        border-radius: 10px;
-        padding: 14px;
+      .hint {
+        font-size: 18px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.5;
+        margin: 0;
+        max-width: 240px;
       }
 
-      .url-input-group {
-        display: flex;
-        gap: 8px;
-      }
-
-      input[type="text"] {
-        flex: 1;
-        border-radius: 6px;
-        border: 1px solid var(--figma-color-border, #d0d0d0);
-        padding: 10px 12px;
-        font-size: 13px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      }
-
-      input[type="text"]:focus {
-        outline: 2px solid #007bff;
-        outline-offset: -1px;
-      }
-
-      input[type="text"]::placeholder {
-        color: #999;
-        font-family: inherit;
-      }
-
-      textarea {
-        resize: none;
+      .bottom {
         width: 100%;
-        min-height: 120px;
-        border-radius: 8px;
-        border: 1px solid var(--figma-color-border, #d0d0d0);
-        padding: 12px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
 
-      textarea:focus {
-        outline: 2px solid #007bff;
-      }
-
-      button,
-      label.button {
+      button {
         border: none;
-        border-radius: 6px;
-        padding: 10px 14px;
-        font-size: 12px;
+        border-radius: 12px;
+        padding: 16px 24px;
+        font-size: 16px;
         font-weight: 600;
+        font-family: inherit;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        transition: opacity 0.15s;
+        gap: 8px;
+        transition: all 0.2s ease;
+        width: 100%;
       }
 
       button:disabled {
-        opacity: 0.6;
+        opacity: 0.7;
         cursor: not-allowed;
       }
 
       button.primary {
-        background: #0061f2;
-        color: #fff;
+        background: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
       }
 
       button.primary:hover:not(:disabled) {
-        background: #0052cc;
+        background: rgba(255, 255, 255, 0.3);
+        color: #fff;
+        transform: translateY(-1px);
       }
 
-      button.secondary,
-      label.button {
-        background: #e4e7ec;
-        color: #111;
-      }
-
-      button.secondary:hover:not(:disabled),
-      label.button:hover {
-        background: #d4d7dc;
-      }
-
-      button.full-width {
-        width: 100%;
-      }
-
-      .divider {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        color: #999;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .divider::before,
-      .divider::after {
-        content: "";
-        flex: 1;
-        height: 1px;
-        background: var(--figma-color-border, #d0d0d0);
+      button.primary:active:not(:disabled) {
+        transform: translateY(0);
       }
 
       .status {
-        font-size: 12px;
-        min-height: 18px;
-        padding: 8px 12px;
-        border-radius: 6px;
-        background: rgba(0, 0, 0, 0.03);
+        font-size: 13px;
+        min-height: 20px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        text-align: center;
       }
 
       .status:empty {
@@ -164,87 +119,42 @@ const HTML_TEMPLATE = `
       }
 
       .status[data-status="error"] {
-        color: #d92d20;
-        background: rgba(217, 45, 32, 0.08);
+        color: #fecaca;
+        background: rgba(220, 38, 38, 0.25);
+        border: 1px solid rgba(220, 38, 38, 0.3);
       }
 
       .status[data-status="success"] {
-        color: #039855;
-        background: rgba(3, 152, 85, 0.08);
+        color: #bbf7d0;
+        background: rgba(34, 197, 94, 0.25);
+        border: 1px solid rgba(34, 197, 94, 0.3);
       }
 
       .status[data-status="loading"] {
-        color: #0061f2;
-        background: rgba(0, 97, 242, 0.08);
-      }
-
-      .hint {
-        font-size: 11px;
-        color: #666;
-        line-height: 1.4;
-      }
-
-      .manual-section {
-        border-top: 1px solid var(--figma-color-border, #d0d0d0);
-        padding-top: 16px;
-      }
-
-      .button-row {
-        display: flex;
-        gap: 8px;
-      }
-
-      .button-row > * {
-        flex: 1;
+        color: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <div>
-        <h1>Supermix Storyboards Importer</h1>
+      <h1 class="brand">Supermix</h1>
+
+      <div class="content">
         <p class="hint">
-          Paste a storyboard URL or shareable link from the Supermix app.
+          Copy storyboards from Supermix,
+          then press <strong>⌘V</strong> or <strong>Ctrl+V</strong> here.
         </p>
       </div>
 
-      <!-- Primary: URL Import -->
-      <div class="section primary-section">
-        <div class="section-label">Quick Import</div>
-        <div class="url-input-group">
-          <input
-            type="text"
-            id="urlInput"
-            placeholder="Paste storyboard URL (e.g., supermix.app/abc123)"
-          />
-          <button class="primary" id="fetchUrl">Import</button>
-        </div>
+      <div class="bottom">
+        <div class="status" id="status" data-status="idle"></div>
       </div>
-
-      <div class="divider">or import manually</div>
-
-      <!-- Secondary: Manual Import -->
-      <div class="section manual-section">
-        <textarea id="jsonInput" placeholder="Paste your storyboard export JSON here"></textarea>
-        <div class="button-row">
-          <button class="secondary" id="importJson">Import JSON</button>
-          <label class="button secondary">
-            <input type="file" id="fileInput" accept="application/json" style="display:none;" />
-            Upload file
-          </label>
-        </div>
-      </div>
-
-      <div class="status" id="status" data-status="idle"></div>
     </div>
 
     <script>
       const statusEl = document.getElementById('status');
-      const urlInput = document.getElementById('urlInput');
-      const fetchUrlBtn = document.getElementById('fetchUrl');
-      const jsonInput = document.getElementById('jsonInput');
-      const importBtn = document.getElementById('importJson');
-      const fileInput = document.getElementById('fileInput');
 
       function setStatus(message, status = 'idle') {
         statusEl.textContent = message || '';
@@ -258,178 +168,38 @@ const HTML_TEMPLATE = `
         );
       }
 
-      function parseInput(input) {
-        const trimmed = input.trim();
-        
-        // Try to parse as a full URL first
+      function handlePastedText(text) {
+        if (!text || !text.trim()) {
+          setStatus('Clipboard is empty. Copy storyboards from Supermix first.', 'error');
+          return;
+        }
+
+        let payload;
         try {
-          const url = new URL(trimmed);
-          
-          // Check for legacy export URL: /api/figma-export/{id}
-          const exportMatch = url.pathname.match(/\\/api\\/figma-export\\/([a-zA-Z0-9]+)\\/?$/);
-          if (exportMatch) {
-            return { 
-              type: 'export', 
-              id: exportMatch[1], 
-              baseUrl: url.origin 
-            };
-          }
-          
-          // Check for storyboard URL: /{id} (single path segment, alphanumeric with hyphens)
-          const storyboardMatch = url.pathname.match(/^\\/([a-zA-Z0-9_-]+)\\/?$/);
-          if (storyboardMatch) {
-            return { 
-              type: 'storyboard', 
-              id: storyboardMatch[1], 
-              baseUrl: url.origin 
-            };
-          }
-          
-          // Check for storyboard API URL: /api/storyboard/{id}
-          const storyboardApiMatch = url.pathname.match(/\\/api\\/storyboard\\/([a-zA-Z0-9_-]+)\\/?$/);
-          if (storyboardApiMatch) {
-            return { 
-              type: 'storyboard', 
-              id: storyboardApiMatch[1], 
-              baseUrl: url.origin 
-            };
-          }
-        } catch (e) {
-          // Not a valid URL, continue checking other patterns
+          payload = JSON.parse(text.trim());
+        } catch (parseError) {
+          setStatus('Clipboard does not contain valid storyboard data.', 'error');
+          return;
         }
-        
-        // Check for relative URL patterns without protocol
-        // Legacy export format: /api/figma-export/{id}
-        const relativeExportMatch = trimmed.match(/^\\/?api\\/figma-export\\/([a-zA-Z0-9]+)\\/?$/);
-        if (relativeExportMatch) {
-          return { type: 'export', id: relativeExportMatch[1], baseUrl: null };
+
+        if (!payload.storyboards || !Array.isArray(payload.storyboards)) {
+          setStatus('Invalid storyboard data. Copy from Supermix and try again.', 'error');
+          return;
         }
-        
-        // Storyboard API format: /api/storyboard/{id}
-        const relativeStoryboardApiMatch = trimmed.match(/^\\/?api\\/storyboard\\/([a-zA-Z0-9_-]+)\\/?$/);
-        if (relativeStoryboardApiMatch) {
-          return { type: 'storyboard', id: relativeStoryboardApiMatch[1], baseUrl: null };
-        }
-        
-        // Relative storyboard format: /{id}
-        const relativeStoryboardMatch = trimmed.match(/^\\/([a-zA-Z0-9_-]+)\\/?$/);
-        if (relativeStoryboardMatch) {
-          return { type: 'storyboard', id: relativeStoryboardMatch[1], baseUrl: null };
-        }
-        
-        // Just an ID (alphanumeric with underscores/hyphens, reasonable length)
-        // Assume it's a storyboard ID since that's the primary use case now
-        if (/^[a-zA-Z0-9_-]{4,64}$/.test(trimmed)) {
-          return { type: 'storyboard', id: trimmed, baseUrl: null };
-        }
-        
-        return null;
+
+        setStatus('Importing storyboards…', 'loading');
+        sendPayload(payload);
       }
 
-      async function fetchFromUrl() {
-        const input = urlInput.value.trim();
-        if (!input) {
-          setStatus('Enter a storyboard URL', 'error');
-          return;
-        }
-
-        const parsed = parseInput(input);
-        if (!parsed) {
-          setStatus('Invalid URL or ID format', 'error');
-          return;
-        }
-
-        // Build the fetch URL based on type
-        let fetchUrl;
-        if (parsed.baseUrl) {
-          // We have the full base URL
-          const apiPath = parsed.type === 'storyboard' 
-            ? '/api/storyboard/' 
-            : '/api/figma-export/';
-          fetchUrl = parsed.baseUrl + apiPath + parsed.id;
-        } else {
-          // No base URL - require full URL for security
-          setStatus('Please paste the full URL including https://', 'error');
-          return;
-        }
-
-        setStatus('Fetching storyboards…', 'loading');
-        fetchUrlBtn.disabled = true;
-
-        try {
-          const response = await fetch(fetchUrl);
-          
-          if (!response.ok) {
-            if (response.status === 404) {
-              const errorType = parsed.type === 'storyboard' 
-                ? 'Storyboard not found' 
-                : 'Export not found or has expired';
-              throw new Error(errorType);
-            }
-            throw new Error('Failed to fetch storyboard');
-          }
-
-          const payload = await response.json();
-          
-          if (payload.error) {
-            throw new Error(payload.error);
-          }
-
-          setStatus('Importing…', 'loading');
-          sendPayload(payload);
-        } catch (error) {
-          console.error('Failed to fetch from URL', error);
-          setStatus(error.message || 'Failed to fetch storyboards', 'error');
-        } finally {
-          fetchUrlBtn.disabled = false;
-        }
-      }
-
-      fetchUrlBtn.addEventListener('click', fetchFromUrl);
-      
-      urlInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          fetchFromUrl();
-        }
+      // Listen for paste events on the document
+      document.addEventListener('paste', (event) => {
+        event.preventDefault();
+        const text = event.clipboardData?.getData('text/plain') || '';
+        handlePastedText(text);
       });
 
-      importBtn.addEventListener('click', () => {
-        const value = jsonInput.value.trim();
-        if (!value) {
-          setStatus('Paste JSON before importing', 'error');
-          return;
-        }
-        try {
-          const payload = JSON.parse(value);
-          setStatus('Importing…', 'loading');
-          sendPayload(payload);
-        } catch (error) {
-          console.error('Failed to parse JSON', error);
-          setStatus('Invalid JSON', 'error');
-        }
-      });
-
-      fileInput.addEventListener('change', async (event) => {
-        const files = event.target && event.target.files ? event.target.files : null;
-        const file = files && files[0];
-        if (!file) {
-          return;
-        }
-
-        try {
-          const text = await file.text();
-          jsonInput.value = text;
-          const payload = JSON.parse(text);
-          setStatus('Importing…', 'loading');
-          sendPayload(payload);
-        } catch (error) {
-          console.error('Failed to read JSON file', error);
-          setStatus('Could not read that file', 'error');
-        } finally {
-          event.target.value = '';
-        }
-      });
+      // Show ready status on load
+      setStatus('Ready — paste your storyboards (⌘V / Ctrl+V)', 'loading');
 
       window.onmessage = (event) => {
         const message = event.data.pluginMessage;
@@ -444,9 +214,9 @@ const HTML_TEMPLATE = `
 `;
 
 figma.showUI(HTML_TEMPLATE, {
-  width: 420,
-  height: 520,
-  themeColors: true,
+  width: 300,
+  height: 400,
+  themeColors: false,
 });
 
 const VISUAL_WIDTH = 3840;
@@ -552,7 +322,7 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
   const storyboardTitle =
     storyboard && storyboard.title ? storyboard.title : 'Untitled storyboard';
   const frame = figma.createFrame();
-  frame.name = `${String(index + 1).padStart(2, '0')} · ${storyboardTitle}`;
+  frame.name = `Shot #${index + 1}`;
   frame.layoutMode = 'NONE';
   frame.clipsContent = true;
   frame.strokes = [
@@ -594,17 +364,7 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
   const textWidth = VISUAL_WIDTH - textPadding * 2;
   let cursorY = VISUAL_HEIGHT + textPadding;
 
-  const badge = figma.createText();
-  badge.fontName = { family: 'Inter', style: 'Regular' };
-  badge.fontSize = 22;
-  badge.fills = [{ type: 'SOLID', color: { r: 0.7, g: 0.72, b: 0.78 } }];
-  badge.characters = `Storyboard ${index + 1}`;
-  badge.x = textPadding;
-  badge.y = cursorY;
-  badge.textAutoResize = 'WIDTH_AND_HEIGHT';
-  frame.appendChild(badge);
-  cursorY += badge.height + 12;
-
+  // Notes section - always shown with placeholder if empty
   const notesText =
     storyboard &&
     typeof storyboard.notes === 'string' &&
@@ -612,36 +372,57 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
       ? storyboard.notes.trim()
       : null;
 
-  if (notesText) {
-    const notesLabel = figma.createText();
-    notesLabel.fontName = { family: 'Inter', style: 'Semi Bold' };
-    notesLabel.fontSize = 24;
-    notesLabel.lineHeight = { value: 32, unit: 'PIXELS' };
-    notesLabel.fills = [{ type: 'SOLID', color: { r: 0.85, g: 0.85, b: 0.9 } }];
-    notesLabel.characters = 'Notes:';
-    notesLabel.x = textPadding;
-    notesLabel.y = cursorY;
-    notesLabel.textAutoResize = 'WIDTH_AND_HEIGHT';
-    frame.appendChild(notesLabel);
-    cursorY += notesLabel.height + 8;
+  const notesLabel = figma.createText();
+  notesLabel.fontName = { family: 'Inter', style: 'Semi Bold' };
+  notesLabel.fontSize = 24;
+  notesLabel.lineHeight = { value: 32, unit: 'PIXELS' };
+  notesLabel.fills = [{ type: 'SOLID', color: { r: 0.85, g: 0.85, b: 0.9 } }];
+  notesLabel.characters = 'Notes:';
+  notesLabel.x = textPadding;
+  notesLabel.y = cursorY;
+  notesLabel.textAutoResize = 'WIDTH_AND_HEIGHT';
+  frame.appendChild(notesLabel);
+  cursorY += notesLabel.height + 8;
 
-    const notes = figma.createText();
-    notes.fontName = { family: 'Inter', style: 'Regular' };
-    notes.fontSize = 28;
-    notes.lineHeight = { value: 40, unit: 'PIXELS' };
+  const notes = figma.createText();
+  notes.fontName = { family: 'Inter', style: 'Regular' };
+  notes.fontSize = 44;
+  notes.lineHeight = { value: 56, unit: 'PIXELS' };
+
+  if (notesText) {
     notes.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.95 } }];
     notes.characters = notesText;
-    notes.x = textPadding;
-    notes.y = cursorY;
-    notes.resize(textWidth, 200);
-    notes.textAutoResize = 'HEIGHT';
-    frame.appendChild(notes);
-    cursorY += notes.height + 24;
+  } else {
+    // Placeholder text with muted color
+    notes.fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.52, b: 0.58 } }];
+    notes.characters = 'Add notes here...';
   }
 
+  notes.x = textPadding;
+  notes.y = cursorY;
+  notes.resize(textWidth, 200);
+  notes.textAutoResize = 'HEIGHT';
+  frame.appendChild(notes);
+  cursorY += notes.height + 24;
+
+  // Transcript section
   const transcriptSource = getTranscriptSource(storyboard, fallbackTranscript);
   const hasTranscript = transcriptSource.length > 0;
   const primaryTextContent = hasTranscript ? transcriptSource : storyboardTitle;
+
+  const transcriptLabel = figma.createText();
+  transcriptLabel.fontName = { family: 'Inter', style: 'Semi Bold' };
+  transcriptLabel.fontSize = 24;
+  transcriptLabel.lineHeight = { value: 32, unit: 'PIXELS' };
+  transcriptLabel.fills = [
+    { type: 'SOLID', color: { r: 0.85, g: 0.85, b: 0.9 } },
+  ];
+  transcriptLabel.characters = 'Transcript:';
+  transcriptLabel.x = textPadding;
+  transcriptLabel.y = cursorY;
+  transcriptLabel.textAutoResize = 'WIDTH_AND_HEIGHT';
+  frame.appendChild(transcriptLabel);
+  cursorY += transcriptLabel.height + 8;
 
   const primaryText = figma.createText();
   primaryText.fontName = hasTranscript
@@ -659,9 +440,9 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
   cursorY += primaryText.height + 20;
 
   const timingLabel = figma.createText();
-  timingLabel.fontName = { family: 'Inter', style: 'Regular' };
-  timingLabel.fontSize = 24;
-  timingLabel.lineHeight = { value: 32, unit: 'PIXELS' };
+  timingLabel.fontName = { family: 'Inter', style: 'Semi Bold' };
+  timingLabel.fontSize = 36;
+  timingLabel.lineHeight = { value: 48, unit: 'PIXELS' };
   timingLabel.fills = [{ type: 'SOLID', color: { r: 0.67, g: 0.79, b: 0.96 } }];
   timingLabel.characters = formatTimingLabel(storyboard.start, storyboard.end);
   timingLabel.x = textPadding;
