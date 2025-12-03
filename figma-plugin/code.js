@@ -449,12 +449,12 @@ figma.showUI(HTML_TEMPLATE, {
   themeColors: true,
 });
 
-const VISUAL_WIDTH = 1920;
-const VISUAL_HEIGHT = 1080;
-const TEXT_SECTION_PADDING = 24;
+const VISUAL_WIDTH = 3840;
+const VISUAL_HEIGHT = 2160;
+const TEXT_SECTION_PADDING = 48;
 const CARD_WIDTH = VISUAL_WIDTH;
-const CARD_HORIZONTAL_GAP = 80;
-const ROW_GAP = 80;
+const CARD_HORIZONTAL_GAP = 160;
+const ROW_GAP = 160;
 const COLUMN_COUNT = 6;
 
 const PLACEHOLDER_VISUAL_FILL = {
@@ -561,8 +561,8 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
       color: { r: 0.2, g: 0.22, b: 0.27 },
     },
   ];
-  frame.strokeWeight = 1;
-  frame.cornerRadius = 24;
+  frame.strokeWeight = 2;
+  frame.cornerRadius = 48;
   frame.fills = [
     {
       type: 'SOLID',
@@ -573,8 +573,8 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
     {
       type: 'DROP_SHADOW',
       color: { r: 0, g: 0, b: 0, a: 0.25 },
-      offset: { x: 0, y: 16 },
-      radius: 32,
+      offset: { x: 0, y: 32 },
+      radius: 64,
       visible: true,
       spread: 0,
       blendMode: 'NORMAL',
@@ -596,14 +596,14 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
 
   const badge = figma.createText();
   badge.fontName = { family: 'Inter', style: 'Regular' };
-  badge.fontSize = 11;
+  badge.fontSize = 22;
   badge.fills = [{ type: 'SOLID', color: { r: 0.7, g: 0.72, b: 0.78 } }];
   badge.characters = `Storyboard ${index + 1}`;
   badge.x = textPadding;
   badge.y = cursorY;
   badge.textAutoResize = 'WIDTH_AND_HEIGHT';
   frame.appendChild(badge);
-  cursorY += badge.height + 6;
+  cursorY += badge.height + 12;
 
   const notesText =
     storyboard &&
@@ -615,28 +615,28 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
   if (notesText) {
     const notesLabel = figma.createText();
     notesLabel.fontName = { family: 'Inter', style: 'Semi Bold' };
-    notesLabel.fontSize = 12;
-    notesLabel.lineHeight = { value: 16, unit: 'PIXELS' };
+    notesLabel.fontSize = 24;
+    notesLabel.lineHeight = { value: 32, unit: 'PIXELS' };
     notesLabel.fills = [{ type: 'SOLID', color: { r: 0.85, g: 0.85, b: 0.9 } }];
     notesLabel.characters = 'Notes:';
     notesLabel.x = textPadding;
     notesLabel.y = cursorY;
     notesLabel.textAutoResize = 'WIDTH_AND_HEIGHT';
     frame.appendChild(notesLabel);
-    cursorY += notesLabel.height + 4;
+    cursorY += notesLabel.height + 8;
 
     const notes = figma.createText();
     notes.fontName = { family: 'Inter', style: 'Regular' };
-    notes.fontSize = 14;
-    notes.lineHeight = { value: 20, unit: 'PIXELS' };
+    notes.fontSize = 28;
+    notes.lineHeight = { value: 40, unit: 'PIXELS' };
     notes.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.95 } }];
     notes.characters = notesText;
     notes.x = textPadding;
     notes.y = cursorY;
-    notes.resize(textWidth, 100);
+    notes.resize(textWidth, 200);
     notes.textAutoResize = 'HEIGHT';
     frame.appendChild(notes);
-    cursorY += notes.height + 12;
+    cursorY += notes.height + 24;
   }
 
   const transcriptSource = getTranscriptSource(storyboard, fallbackTranscript);
@@ -647,29 +647,29 @@ async function createStoryboardFrame(storyboard, index, fallbackTranscript) {
   primaryText.fontName = hasTranscript
     ? { family: 'Inter', style: 'Regular' }
     : { family: 'Inter', style: 'Bold' };
-  primaryText.fontSize = 22;
-  primaryText.lineHeight = { value: 28, unit: 'PIXELS' };
+  primaryText.fontSize = 44;
+  primaryText.lineHeight = { value: 56, unit: 'PIXELS' };
   primaryText.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
   primaryText.characters = primaryTextContent;
   primaryText.x = textPadding;
   primaryText.y = cursorY;
-  primaryText.resize(textWidth, 100);
+  primaryText.resize(textWidth, 200);
   primaryText.textAutoResize = 'HEIGHT';
   frame.appendChild(primaryText);
-  cursorY += primaryText.height + 10;
+  cursorY += primaryText.height + 20;
 
   const timingLabel = figma.createText();
   timingLabel.fontName = { family: 'Inter', style: 'Regular' };
-  timingLabel.fontSize = 12;
-  timingLabel.lineHeight = { value: 16, unit: 'PIXELS' };
+  timingLabel.fontSize = 24;
+  timingLabel.lineHeight = { value: 32, unit: 'PIXELS' };
   timingLabel.fills = [{ type: 'SOLID', color: { r: 0.67, g: 0.79, b: 0.96 } }];
   timingLabel.characters = formatTimingLabel(storyboard.start, storyboard.end);
   timingLabel.x = textPadding;
   timingLabel.y = cursorY;
-  timingLabel.resize(textWidth, 40);
+  timingLabel.resize(textWidth, 80);
   timingLabel.textAutoResize = 'HEIGHT';
   frame.appendChild(timingLabel);
-  cursorY += timingLabel.height + 16;
+  cursorY += timingLabel.height + 32;
 
   const finalHeight = cursorY + textPadding;
   frame.resize(CARD_WIDTH, finalHeight);
